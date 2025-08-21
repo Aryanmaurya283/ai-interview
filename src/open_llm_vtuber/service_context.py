@@ -499,12 +499,17 @@ class ServiceContext:
                 if not file_path.startswith(characters_dir):
                     raise ValueError("Invalid configuration file path")
 
-                alt_config_data = read_yaml(file_path).get("character_config")
-
-                # Start with original config data and perform a deep merge
-                new_character_config_data = deep_merge(
-                    self.config.character_config.model_dump(), alt_config_data
-                )
+                alt_config_data = read_yaml(file_path)
+                if alt_config_data and "character_config" in alt_config_data:
+                    # Start with original config data and perform a deep merge
+                    new_character_config_data = deep_merge(
+                        self.config.character_config.model_dump(),
+                        alt_config_data.get("character_config"),
+                    )
+                else:
+                    # If alt_config_data is None or doesn't have character_config,
+                    # use the original character_config
+                    new_character_config_data = self.config.character_config.model_dump()
 
             if new_character_config_data:
                 new_config = {
@@ -563,6 +568,9 @@ def deep_merge(dict1, dict2):
     """
     Recursively merges dict2 into dict1, prioritizing values from dict2.
     """
+    if not isinstance(dict1, dict) or not isinstance(dict2, dict):
+        return dict2 or dict1 or {}
+
     result = dict1.copy()
     for key, value in dict2.items():
         if key in result and isinstance(result[key], dict) and isinstance(value, dict):

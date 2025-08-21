@@ -108,11 +108,23 @@ def init_webtool_routes(default_context_cache: ServiceContext) -> APIRouter:
         for entry in os.scandir(live2d_dir):
             if entry.is_dir():
                 folder_name = entry.name.replace("\\", "/")
-                model3_file = os.path.join(
-                    live2d_dir, folder_name, f"{folder_name}.model3.json"
-                ).replace("\\", "/")
+                
+                # Check for model3.json in runtime folder first, then root
+                model3_file = None
+                runtime_path = os.path.join(live2d_dir, folder_name, "runtime", f"{folder_name}.model3.json")
+                root_path = os.path.join(live2d_dir, folder_name, f"{folder_name}.model3.json")
+                
+                # Special case for haru_greeter_pro_jp
+                if folder_name == "haru_greeter_pro_jp":
+                    haru_path = os.path.join(live2d_dir, folder_name, "runtime", "haru_greeter_t05.model3.json")
+                    if os.path.isfile(haru_path):
+                        model3_file = haru_path.replace("\\", "/")
+                elif os.path.isfile(runtime_path):
+                    model3_file = runtime_path.replace("\\", "/")
+                elif os.path.isfile(root_path):
+                    model3_file = root_path.replace("\\", "/")
 
-                if os.path.isfile(model3_file):
+                if model3_file:
                     # Find avatar file if it exists
                     avatar_file = None
                     for ext in supported_extensions:

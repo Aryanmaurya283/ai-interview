@@ -15,7 +15,7 @@
 		},
 		{
 			"Id": "ParamEyeLSmile",
-			"Value": 1,
+			"Value": 1.5,
 			"Blend": "Add"
 		},
 		{
@@ -30,7 +30,7 @@
 		},
 		{
 			"Id": "ParamEyeRSmile",
-			"Value": 1,
+			"Value": 1.5,
 			"Blend": "Add"
 		},
 		{
@@ -125,12 +125,17 @@
 		},
 		{
 			"Id": "ParamMouthUp",
-			"Value": 0,
+			"Value": 0.8,
 			"Blend": "Add"
 		},
 		{
 			"Id": "ParamMouthDown",
-			"Value": 0,
+			"Value": 0.8,
+			"Blend": "Add"
+		},
+		{
+			"Id": "ParamBodyAngleX",
+			"Value": 5,
 			"Blend": "Add"
 		},
 		{

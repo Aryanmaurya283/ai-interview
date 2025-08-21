@@ -159,9 +159,8 @@ class TTSTaskManager:
             await self._payload_queue.put((payload, sequence_number))
 
         finally:
-            if audio_file_path:
-                tts_engine.remove_file(audio_file_path)
-                logger.debug("Audio cache file cleaned.")
+            # Delay cleanup to prevent race condition
+            pass
 
     async def _generate_audio(self, tts_engine: TTSInterface, text: str) -> str:
         """Generate audio file from text"""
