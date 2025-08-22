@@ -3,6 +3,7 @@ import asyncio
 import json
 from loguru import logger
 import numpy as np
+from datetime import datetime
 
 from .conversation_utils import (
     create_batch_input,
@@ -70,13 +71,25 @@ async def process_single_conversation(
         # Store user message (check if we should skip storing to history)
         skip_history = metadata and metadata.get("skip_history", False)
         if context.history_uid and not skip_history:
+            timestamp = datetime.utcnow()
+            user_message_data = {
+                "conf_uid": context.character_config.conf_uid,
+                "history_uid": context.history_uid,
+                "role": "human",
+                "content": input_text,
+                "name": context.character_config.human_name,
+                "timestamp": timestamp, # For MongoDB
+                "client_uid": client_uid, # For MongoDB
+            }
             store_message(
-                conf_uid=context.character_config.conf_uid,
-                history_uid=context.history_uid,
-                role="human",
-                content=input_text,
-                name=context.character_config.human_name,
+                conf_uid=user_message_data["conf_uid"],
+                history_uid=user_message_data["history_uid"],
+                role=user_message_data["role"],
+                content=user_message_data["content"],
+                name=user_message_data["name"],
             )
+            if context.mongo_manager:
+                context.mongo_manager.save_message("chat_messages", user_message_data)
 
         if skip_history:
             logger.debug("Skipping storing user input to history (proactive speak)")
@@ -149,14 +162,27 @@ async def process_single_conversation(
         )
 
         if context.history_uid and full_response:  # Check full_response before storing
+            timestamp = datetime.utcnow()
+            ai_message_data = {
+                "conf_uid": context.character_config.conf_uid,
+                "history_uid": context.history_uid,
+                "role": "ai",
+                "content": full_response,
+                "name": context.character_config.character_name,
+                "avatar": context.character_config.avatar,
+                "timestamp": timestamp, # For MongoDB
+                "client_uid": client_uid, # For MongoDB
+            }
             store_message(
-                conf_uid=context.character_config.conf_uid,
-                history_uid=context.history_uid,
-                role="ai",
-                content=full_response,
-                name=context.character_config.character_name,
-                avatar=context.character_config.avatar,
+                conf_uid=ai_message_data["conf_uid"],
+                history_uid=ai_message_data["history_uid"],
+                role=ai_message_data["role"],
+                content=ai_message_data["content"],
+                name=ai_message_data["name"],
+                avatar=ai_message_data["avatar"],
             )
+            if context.mongo_manager:
+                context.mongo_manager.save_message("chat_messages", ai_message_data)
             logger.info(f"AI response: {full_response}")
 
         return full_response  # Return accumulated full_response

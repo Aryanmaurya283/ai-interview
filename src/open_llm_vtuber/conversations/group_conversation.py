@@ -4,6 +4,7 @@ import json
 from loguru import logger
 from fastapi import WebSocket
 import numpy as np
+from datetime import datetime
 
 from ..agent.output_types import AudioOutput, SentenceOutput
 
@@ -91,15 +92,27 @@ async def process_group_conversation(
         skip_history = metadata and metadata.get("skip_history", False)
 
         if not skip_history:
+            timestamp = datetime.utcnow()
             for member_uid in group_members:
                 member_context = client_contexts[member_uid]
+                user_message_data = {
+                    "conf_uid": member_context.character_config.conf_uid,
+                    "history_uid": member_context.history_uid,
+                    "role": "human",
+                    "content": input_text,
+                    "name": human_name,
+                    "timestamp": timestamp, # For MongoDB
+                    "client_uid": initiator_client_uid, # For MongoDB
+                }
                 store_message(
-                    conf_uid=member_context.character_config.conf_uid,
-                    history_uid=member_context.history_uid,
-                    role="human",
-                    content=input_text,
-                    name=human_name,
+                    conf_uid=user_message_data["conf_uid"],
+                    history_uid=user_message_data["history_uid"],
+                    role=user_message_data["role"],
+                    content=user_message_data["content"],
+                    name=user_message_data["name"],
                 )
+                if member_context.mongo_manager:
+                    member_context.mongo_manager.save_message("chat_messages", user_message_data)
         else:
             logger.debug("Skipping storing proactive speak input to group history")
 
@@ -289,16 +302,29 @@ async def handle_group_member_turn(
         state.conversation_history.append(ai_message)
         logger.info(f"Appended complete response: {ai_message}")
 
+        timestamp = datetime.utcnow()
         for member_uid in group_members:
             member_context = client_contexts[member_uid]
+            ai_message_data = {
+                "conf_uid": member_context.character_config.conf_uid,
+                "history_uid": member_context.history_uid,
+                "role": "ai",
+                "content": full_response,
+                "name": context.character_config.character_name,
+                "avatar": context.character_config.avatar,
+                "timestamp": timestamp, # For MongoDB
+                "client_uid": member_uid, # Each member gets the AI response
+            }
             store_message(
-                conf_uid=member_context.character_config.conf_uid,
-                history_uid=member_context.history_uid,
-                role="ai",
-                content=full_response,
-                name=context.character_config.character_name,
-                avatar=context.character_config.avatar,
+                conf_uid=ai_message_data["conf_uid"],
+                history_uid=ai_message_data["history_uid"],
+                role=ai_message_data["role"],
+                content=ai_message_data["content"],
+                name=ai_message_data["name"],
+                avatar=ai_message_data["avatar"],
             )
+            if member_context.mongo_manager:
+                member_context.mongo_manager.save_message("chat_messages", ai_message_data)
         else:
             logger.debug("Skipping storing AI response to history (proactive speak)")
 

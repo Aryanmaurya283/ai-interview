@@ -146,7 +146,7 @@ character_config:
         temperature: 1.0 # value between 0 to 2
 
       gemini_llm:
-        llm_api_key: 'Your Gemini API Key'
+        llm_api_key: 'AIzaSyAMeIphxtNSmn32qorsPPwfxvWOazPDPW0'
         model: 'gemini-2.0-flash-exp'
         temperature: 1.0 # value between 0 to 2
 

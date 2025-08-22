@@ -6,17 +6,23 @@ the WebSocket connections, serves static files, and manages the web tool.
 It uses FastAPI for the server and Starlette for static file serving.
 """
 
+from loguru import logger
+
 import os
 import shutil
 
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File
 from starlette.middleware.cors import CORSMiddleware
-from starlette.responses import Response
+from starlette.responses import Response, JSONResponse
 from starlette.staticfiles import StaticFiles as StarletteStaticFiles
 
+from typing import Dict
+
 from .routes import init_client_ws_route, init_webtool_routes, init_proxy_route
+from .state_manager import resume_texts
 from .service_context import ServiceContext
 from .config_manager.utils import Config
+from .utils.resume_parser import parse_resume
 
 
 # Create a custom StaticFiles class that adds CORS headers
@@ -53,6 +59,26 @@ class AvatarStaticFiles(CORSStaticFiles):
         return response
 
 
+app = FastAPI(title="Open-LLM-VTuber Server")
+
+@app.post("/upload_resume/{client_uid}")
+async def upload_resume(client_uid: str, file: UploadFile = File(...)):
+    """
+    Endpoint for uploading and parsing a resume.
+    """
+    logger.info(f"Received resume for client_uid: {client_uid}")
+    
+    parsed_text = parse_resume(file)
+    
+    if parsed_text.startswith("Unsupported file type") or parsed_text.startswith("Error parsing file"):
+        return JSONResponse(content={"error": parsed_text}, status_code=400)
+    
+    resume_texts[client_uid] = parsed_text
+    logger.info(f"Successfully stored resume for client_uid: {client_uid}")
+    
+    return JSONResponse(content={"message": "Resume uploaded successfully.", "client_uid": client_uid})
+
+
 class WebSocketServer:
     """
     API server for Open-LLM-VTuber. This contains the websocket endpoint for the client, hosts the web tool, and serves static files.
@@ -72,7 +98,7 @@ class WebSocketServer:
     """
 
     def __init__(self, config: Config, default_context_cache: ServiceContext = None):
-        self.app = FastAPI(title="Open-LLM-VTuber Server")  # Added title for clarity
+        self.app = app # Use the module-level app instance
         self.config = config
         self.default_context_cache = (
             default_context_cache or ServiceContext()

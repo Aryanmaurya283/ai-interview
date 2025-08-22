@@ -1,5 +1,7 @@
 import os
 import json
+from .utils.database import initialize_mongodb, mongo_manager
+
 from typing import Callable
 from loguru import logger
 from fastapi import WebSocket
@@ -36,6 +38,7 @@ from .config_manager import (
     read_yaml,
     validate_config,
 )
+from .state_manager import resume_texts
 
 
 class ServiceContext:
@@ -71,6 +74,7 @@ class ServiceContext:
 
         self.send_text: Callable = None
         self.client_uid: str = None
+        self.mongo_manager = None
 
     def __str__(self):
         return (
@@ -263,6 +267,11 @@ class ServiceContext:
         if not self.character_config:
             self.character_config = config.character_config
 
+        # Initialize MongoDB if connection string is provided
+        if config.mongodb_connection_string:
+            initialize_mongodb(config.mongodb_connection_string)
+            self.mongo_manager = mongo_manager
+
         # update all sub-configs
 
         # init live2d from character config
@@ -435,14 +444,39 @@ class ServiceContext:
 
     async def construct_system_prompt(self, persona_prompt: str) -> str:
         """
-        Append tool prompts to persona prompt.
+        Construct the system prompt by potentially loading a persona prompt from a file,
+        injecting resume text, and appending tool prompts.
 
         Parameters:
-        - persona_prompt (str): The persona prompt.
+        - persona_prompt (str): The persona prompt string from the config.
+                                This can be the full prompt text or a name
+                                of a file in the prompts/utils directory.
 
         Returns:
-        - str: The system prompt with all tool prompts appended.
+        - str: The fully constructed system prompt.
         """
+        logger.debug(f"Received persona_prompt: '''{persona_prompt}'''")
+        logger.debug(f"Client UID in construct_system_prompt: {self.client_uid}")
+        logger.debug(f"Resume texts keys: {resume_texts.keys()}")
+
+        # Check if the persona_prompt is a reference to a file in utils
+        try:
+            # Attempt to load the prompt from the utils directory
+            loaded_prompt = prompt_loader.load_util(persona_prompt)
+            persona_prompt = loaded_prompt
+            logger.info(f"Loaded persona prompt from file: {persona_prompt[:100]}...")
+        except FileNotFoundError:
+            logger.info("Using literal string as persona prompt.")
+            pass # It's not a file, so we'll use the string as is.
+
+        # Check for and prepend resume text if it exists for the client
+        if self.client_uid and self.client_uid in resume_texts:
+            resume_text = resume_texts[self.client_uid]
+            logger.debug(f"Found resume text for client {self.client_uid}: {resume_text[:100]}...")
+            resume_prompt = f"The following is the candidate's resume. Use it to conduct a thorough and relevant interview.\n\n---\nRESUME START ---\n{resume_text}\n--- RESUME END ---\n\n"
+            persona_prompt = resume_prompt + persona_prompt
+            logger.info(f"Prepended resume to system prompt for client {self.client_uid}.")
+
         logger.debug(f"constructing persona_prompt: '''{persona_prompt}'''")
 
         for prompt_name, prompt_file in self.system_config.tool_prompts.items():

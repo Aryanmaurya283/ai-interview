@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple AI Interviewer</title>
+    <style>
+        body { font-family: sans-serif; padding: 2em; display: flex; flex-direction: column; height: 100vh; margin: 0; }
+        #header { text-align: center; margin-bottom: 1em; }
+        #chat-container { flex-grow: 1; border: 1px solid #ccc; padding: 1em; overflow-y: auto; margin-bottom: 1em; }
+        #input-container { display: flex; }
+        #text-input { flex-grow: 1; padding: 0.5em; font-size: 1em; }
+        #send-button { padding: 0.5em 1em; font-size: 1em; margin-left: 0.5em; }
+        #status { margin-top: 1em; font-weight: bold; }
+        .message { margin-bottom: 0.5em; }
+        .user-message { text-align: right; color: blue; }
+        .ai-message { text-align: left; color: green; }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>AI Interviewer</h1>
+        <p>Client UID: <span id="client-uid">Connecting...</span></p>
+        <p id="status">Connecting to AI...</p>
+        <button id="upload-resume-button">Upload Resume</button>
+    </div>
+
+    <div id="chat-container"></div>
+
+    <div id="input-container">
+        <input type="text" id="text-input" placeholder="Type your response...">
+        <button id="send-button">Send</button>
+    </div>
+
+    <script>
+        const clientUidSpan = document.getElementById('client-uid');
+        const statusDiv = document.getElementById('status');
+        const chatContainer = document.getElementById('chat-container');
+        const textInput = document.getElementById('text-input');
+        const sendButton = document.getElementById('send-button');
+
+        let clientUid = null;
+        let ws = null;
+
+        function appendMessage(sender, text) {
+            const msgDiv = document.createElement('div');
+            msgDiv.classList.add('message');
+            msgDiv.classList.add(sender === 'user' ? 'user-message' : 'ai-message');
+            msgDiv.textContent = text;
+            chatContainer.appendChild(msgDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight; // Auto-scroll to bottom
+        }
+
+        function connectWebSocket() {
+            ws = new WebSocket(`ws://localhost:12393/client-ws`);
+
+            ws.onopen = (event) => {
+                statusDiv.textContent = 'Connected. Waiting for AI...';
+                // Request initial config to get client_uid
+                ws.send(JSON.stringify({ type: 'request-init-config' }));
+            };
+
+            ws.onmessage = (event) => {
+                const message = JSON.parse(event.data);
+                console.log('Received:', message);
+
+                if (message.type === 'set-model-and-conf') {
+                    clientUid = message.client_uid;
+                    clientUidSpan.textContent = clientUid;
+                    statusDiv.textContent = 'AI Ready. Type your response.';
+                } else if (message.type === 'full-text') {
+                    appendMessage('ai', message.text);
+                } else if (message.type === 'control' && message.text === 'start-mic') {
+                    // Placeholder for mic start logic
+                    statusDiv.textContent = 'AI Ready. Mic can start (not implemented yet).';
+                } else if (message.type === 'error') {
+                    statusDiv.textContent = `Error: ${message.message}`;
+                    statusDiv.style.color = 'red';
+                }
+            };
+
+            ws.onclose = (event) => {
+                statusDiv.textContent = 'Disconnected. Reconnecting...';
+                clientUidSpan.textContent = 'Disconnected';
+                setTimeout(connectWebSocket, 1000); // Attempt to reconnect after 1 second
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket Error:', error);
+                statusDiv.textContent = 'WebSocket Error. Check console.';
+                statusDiv.style.color = 'red';
+            };
+        }
+
+        sendButton.addEventListener('click', () => {
+            const text = textInput.value.trim();
+            if (text && ws && ws.readyState === WebSocket.OPEN) {
+                appendMessage('user', text);
+                ws.send(JSON.stringify({ type: 'text-input', text: text }));
+                textInput.value = '';
+            }
+        });
+
+        textInput.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                sendButton.click();
+            }
+        });
+
+        // Initial connection
+        connectWebSocket();
+
+        const uploadResumeButton = document.getElementById('upload-resume-button');
+        uploadResumeButton.addEventListener('click', () => {
+            if (clientUid) {
+                window.open(`/web-tool/resume_uploader.html?client_uid=${clientUid}`, '_blank');
+            } else {
+                alert('Please wait for the AI to connect and Client UID to be assigned.');
+            }
+        });
+    </script>
+</body>
+</html>

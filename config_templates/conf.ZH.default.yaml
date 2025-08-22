@@ -145,7 +145,7 @@ character_config:
         temperature: 1.0 # 温度，介于 0 到 2 之间
 
       gemini_llm:
-        llm_api_key: 'Your Gemini API Key' # Gemini API 密钥
+        llm_api_key: 'AIzaSyAMeIphxtNSmn32qorsPPwfxvWOazPDPW0' # Gemini API 密钥
         model: 'gemini-2.0-flash-exp' # 使用的模型
         temperature: 1.0 # 温度，介于 0 到 2 之间
 

@@ -1,5 +1,5 @@
 [project]
-name = "open-llm-vtuber"
+name = "AI interviwer"
 version = "1.2.0"
 description = "Talk to any LLM with hands-free voice interaction, voice interruption, and Live2D taking face running locally across platforms"
 readme = "README.md"
@@ -37,6 +37,8 @@ dependencies = [
     "websocket-client>=1.8.0",
     "letta-client>=0.1.100",
     "duckduckgo-mcp-server>=0.1.1",
+    "python-docx>=1.2.0",
+    "pdfplumber>=0.11.7",
 ]
 
 [project.optional-dependencies]
