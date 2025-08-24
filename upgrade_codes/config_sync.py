@@ -11,7 +11,7 @@ from upgrade_codes.upgrade_core.constants import (
 )
 import logging
 from ruamel.yaml import YAML
-from src.open_llm_vtuber.config_manager.utils import load_text_file_with_guess_encoding
+from src.interviwer.config_manager.utils import load_text_file_with_guess_encoding
 from upgrade_codes.upgrade_core.comment_sync import CommentSynchronizer
 from upgrade_codes.version_manager import VersionUpgradeManager
 from upgrade_codes.upgrade_core.upgrade_utils import UpgradeUtility

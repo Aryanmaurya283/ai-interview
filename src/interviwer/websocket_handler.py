@@ -73,6 +73,16 @@ class WebSocketHandler:
         # Message handlers mapping
         self._message_handlers = self._init_message_handlers()
 
+    async def _cleanup_failed_connection(self, client_uid: str):
+        """Clean up resources if a connection fails during initialization."""
+        logger.info(f"Cleaning up failed connection for client {client_uid}")
+        if client_uid in self.client_connections:
+            del self.client_connections[client_uid]
+        if client_uid in self.client_contexts:
+            del self.client_contexts[client_uid]
+        if client_uid in self.received_data_buffers:
+            del self.received_data_buffers[client_uid]
+
     def _init_message_handlers(self) -> Dict[str, Callable]:
         """Initialize message type to handler mapping"""
         return {
@@ -465,6 +475,7 @@ class WebSocketHandler:
     ) -> None:
         """Handle incoming audio data"""
         audio_data = data.get("audio", [])
+        logger.debug(f"Received mic-audio-data from client {client_uid}: {len(audio_data)} samples")
         if audio_data:
             self.received_data_buffers[client_uid] = np.append(
                 self.received_data_buffers[client_uid],

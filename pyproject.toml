@@ -1,5 +1,5 @@
 [project]
-name = "AI interviwer"
+name = "ai-interviewer"
 version = "1.2.0"
 description = "Talk to any LLM with hands-free voice interaction, voice interruption, and Live2D taking face running locally across platforms"
 readme = "README.md"

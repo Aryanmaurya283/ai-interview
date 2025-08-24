@@ -7,8 +7,8 @@ from loguru import logger
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, project_root)
 
-from src.open_llm_vtuber.live.bilibili_live import BiliBiliLivePlatform
-from src.open_llm_vtuber.config_manager.utils import read_yaml, validate_config
+from src.interviwer.live.bilibili_live import BiliBiliLivePlatform
+from src.interviwer.config_manager.utils import read_yaml, validate_config
 
 
 async def main():
